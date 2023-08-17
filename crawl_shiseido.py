@@ -11,6 +11,9 @@ import pandas as pd
 import openpyxl
 from openpyxl import load_workbook
 
+fail_product = []
+miss_name = []
+miss_row = []
 
 header = {'User-Agen':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Safari/605.1.15'}
 url = 'https://www.global-shiseido.com.tw'
@@ -33,7 +36,11 @@ def crawler(url,dir,producttype,filepath,writer):
         price = []
         pic = []
         brand = []
-        
+        info_href = []
+        info_content = []
+        check = [] #所有抓到產品內文的row
+        amount = 0 #總共有幾個產品
+
         # get product name
         for product in data.select('h5.product-name'):
             productname.append(''.join(product.text.split('\n')))
@@ -44,6 +51,33 @@ def crawler(url,dir,producttype,filepath,writer):
             temp_text = ''.join(temp_text.split(','))
             price.append(''.join(temp_text.split('NT$')))
         
+        # get product info href
+        for product in data.select('a.thumb-link'):
+            info_href.append(product.get('href'))
+        #get product info content web code(html) 
+        for count,content in enumerate(info_href):
+            link = requests.get(url+str(content),headers=header)
+            info = bs(link.text,'html.parser')
+            # get info content   
+            for content in info.select(' div.product-info > div.product-description.mobile-only > span'):# 程式碼不一致導致會有些路徑不是這樣
+                check.append(count)
+                info_content.append(content.text)
+            if content == []: #
+                for content in info.select('div.product-description.desktop-only > span > p'):
+                    check.append(count)
+                    info_content.append(content.text)
+
+        # 抓出程式碼路徑不一致的row
+        amount = len(productname)
+        print(f'content amount : {len(check)}')
+        #print(amount)
+        for number in range(amount):
+            if number not in check:
+                info_content.insert(number,None)
+                miss_name.append(producttype)
+                miss_row.append(number)
+
+
         # get product pic
         for product in data.select('img.thumb-image'):
             pic.append(product.get('src'))
@@ -58,6 +92,7 @@ def crawler(url,dir,producttype,filepath,writer):
         df['price'] = price
         df['brand'] = brand
         df['pic'] = pic
+        df['content'] = info_content
         
         
         # save data to excel
@@ -134,5 +169,10 @@ if __name__ == '__main__':
         
     #excel 要一直開著才能在同個檔案保留舊的並新增新的 sheet
     writer.close()
+
+    df_miss = pd.DataFrame()
+    df_miss['Product name'] = miss_name
+    df_miss['row'] = miss_row
+    df_miss.to_excel('miss_data.xlsx',index=False)
         
     print('Finish !!!')
