@@ -11,9 +11,9 @@ import pandas as pd
 import openpyxl
 from openpyxl import load_workbook
 
-fail_product = []
-miss_name = []
-miss_row = []
+#fail_product = []
+#miss_name = []
+#miss_row = []
 
 header = {'User-Agen':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Safari/605.1.15'}
 url = 'https://www.global-shiseido.com.tw'
@@ -67,15 +67,17 @@ def crawler(url,dir,producttype,filepath,writer):
                     check.append(count)
                     info_content.append(content.text)
 
-        # 抓出程式碼路徑不一致的row
-        amount = len(productname)
         print(f'content amount : {len(check)}')
-        #print(amount)
+
+
+        # 抓出程式碼路徑不一致的row -> 評論都會被抓到了
+        """
+        amount = len(productname)
         for number in range(amount):
             if number not in check:
                 info_content.insert(number,None)
                 miss_name.append(producttype)
-                miss_row.append(number)
+                miss_row.append(number)"""
 
 
         # get product pic
@@ -152,27 +154,30 @@ if __name__ == '__main__':
     
     #create a new excel to save crawler's data
     workbook = openpyxl.Workbook()
-    workbook.save('Shiseido_v1.xlsx')
+    workbook.save('Shiseido.xlsx')
     
     #open excel file
-    filepath = 'Shiseido_v1.xlsx'
+    filepath = 'Shiseido.xlsx'
     book = load_workbook(filepath)
     writer = pd.ExcelWriter(filepath, engine = 'openpyxl')
     
-    summary = get_type(url,'Shiseido_v1.xlsx',writer)
+    summary = get_type(url,'Shiseido.xlsx',writer)
 
     
     for i in range(1,summary.shape[0]):
         # index 11 新艷陽．夏 架構不一樣
         if i != 11:
-            crawler(url,summary['href'][i],summary['type'][i],'Shiseido_v1.xlsx',writer)
+            crawler(url,summary['href'][i],summary['type'][i],'Shiseido.xlsx',writer)
         
     #excel 要一直開著才能在同個檔案保留舊的並新增新的 sheet
     writer.close()
 
-    df_miss = pd.DataFrame()
+
+    # 不會有缺漏值
+    """df_miss = pd.DataFrame()
     df_miss['Product name'] = miss_name
     df_miss['row'] = miss_row
-    df_miss.to_excel('miss_data.xlsx',index=False)
+    df_miss.to_excel('miss_data.xlsx',index=False)"""
         
     print('Finish !!!')
+
