@@ -154,7 +154,7 @@ def crawl_rest(df):
         try:
             row = df[df['type']==series].index[0]
             link = df['href'][row]
-            data = requests.get(data+link+'?srule=most-popular&sz=156',headers=header)
+            data = requests.get(url+link+'?srule=most-popular&sz=156',headers=header)
             data = bs(data.text,'html.parser')
             #print(data)
 
@@ -168,7 +168,7 @@ def crawl_rest(df):
             # 到各子頁面抓子產品內容
             comment = []
             for path in info_href:  
-                data = requests.get(data+link+path,headers=header)
+                data = requests.get(url+link+path,headers=header)
                 data = bs(data.text,'html.parser')
                 #data
 
@@ -194,6 +194,15 @@ def crawl_rest(df):
 
     return list(set(rest) - set(sec_time))
 
+def combine(name):
+    writer = pd.ExcelWriter(name, engine = 'openpyxl')
+    for file in os.listdir('temp'):
+        data = pd.read_excel('temp/'+file)
+        #print(data)
+        data.to_excel(writer,sheet_name = file[:-5],index=False)
+
+    writer.close()    
+
 if __name__ == '__main__':
     
     #create a new excel to save crawler's data
@@ -216,11 +225,15 @@ if __name__ == '__main__':
     #excel 要一直開著才能在同個檔案保留舊的並新增新的 sheet
     writer.close()
 
-    print('Finish !!!')
 
     # 最後剩下的產品
     final = rest_product = crawl_rest(summary)
     print(f'最終剩下沒爬：\n{final}')
+
+    combine('Shiseido_2.xlsx')
+
+
+    print('Finish !!!')
     
     
 
