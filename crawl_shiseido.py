@@ -10,10 +10,8 @@ import os
 import pandas as pd
 import openpyxl
 from openpyxl import load_workbook
+import os 
 
-#fail_product = []
-#miss_name = []
-#miss_row = []
 
 header = {'User-Agen':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Safari/605.1.15'}
 url = 'https://www.global-shiseido.com.tw'
@@ -70,16 +68,6 @@ def crawler(url,dir,producttype,filepath,writer):
         print(f'content amount : {len(check)}')
 
 
-        # 抓出程式碼路徑不一致的row -> 評論都會被抓到了
-        """
-        amount = len(productname)
-        for number in range(amount):
-            if number not in check:
-                info_content.insert(number,None)
-                miss_name.append(producttype)
-                miss_row.append(number)"""
-
-
         # get product pic
         for product in data.select('img.thumb-image'):
             pic.append(product.get('src'))
@@ -118,7 +106,7 @@ def crawler(url,dir,producttype,filepath,writer):
             print(f'{producttype} : got wrong \nactual amount : {shouldamount}\ncrawl amount : {crawlamount}\n')
     except Exception as e:
         print(e)
-        #writer.close()
+        
         
         
         
@@ -149,6 +137,62 @@ def get_type(url,filepath,writer):
     
     return df
 
+def crawl_rest(df):
+    print('第二度開始爬蟲')
+    os.mkdir('temp')
+
+    # 去掉含有 all 的項目
+    all_list = df[df['type'].str.contains('All')==False]['type'].tolist()
+    # 抓爬到的產品
+    file = openpyxl.load_workbook('Shiseido.xlsx')
+    got_list = file.sheetnames
+
+    # 沒爬到的
+    rest = list(set(all_list) - set(got_list))
+
+    for series in rest:
+        try:
+            row = df[df['type']==series].index[0]
+            link = df['href'][row]
+            data = requests.get(data+link+'?srule=most-popular&sz=156',headers=header)
+            data = bs(data.text,'html.parser')
+            #print(data)
+
+            # 將所有子產品的url存起來
+            info_href = []
+            for product in data.select('a.thumb-link'):
+                info_href.append(product.get('href'))
+                #print(product.get('href'))
+            print(f'{series} total:{len(info_href)}')
+
+            # 到各子頁面抓子產品內容
+            comment = []
+            for path in info_href:  
+                data = requests.get(data+link+path,headers=header)
+                data = bs(data.text,'html.parser')
+                #data
+
+
+                for name in data.select(' div.product-info > div.product-description.mobile-only > span'):
+                    comment.append(name.text)
+                if name == []:
+                    pass
+                else:
+                    for name in data.select(' div.product-description.desktop-only > span > p > a '):
+                        comment.append(name.text)
+            print(f'comment amount:{len(comment)}')
+
+            table = pd.read_excel('Shiseido_所有資產品的名稱.xlsx',series)
+            table['content'] = comment
+            table.to_excel('temp/'+series+'.xlsx',index=False)
+        except Exception as e:
+            print(e)
+
+    sec_time = []
+    for file in os.listdir('temp'):
+        sec_time.append(file[:-5])
+
+    return list(set(rest) - set(sec_time))
 
 if __name__ == '__main__':
     
@@ -172,12 +216,14 @@ if __name__ == '__main__':
     #excel 要一直開著才能在同個檔案保留舊的並新增新的 sheet
     writer.close()
 
-
-    # 不會有缺漏值
-    """df_miss = pd.DataFrame()
-    df_miss['Product name'] = miss_name
-    df_miss['row'] = miss_row
-    df_miss.to_excel('miss_data.xlsx',index=False)"""
-        
     print('Finish !!!')
+
+    # 最後剩下的產品
+    final = rest_product = crawl_rest(summary)
+    print(f'最終剩下沒爬：\n{final}')
+    
+    
+
+        
+    
 
