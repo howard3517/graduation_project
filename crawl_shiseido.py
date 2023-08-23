@@ -118,7 +118,7 @@ def crawler(url,dir,producttype,filepath,writer):
             print(f'{producttype} : got wrong \nactual amount : {shouldamount}\ncrawl amount : {crawlamount}\n')
     except Exception as e:
         print(e)
-        writer.close()
+        #writer.close()
         
         
         
