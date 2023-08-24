@@ -165,7 +165,9 @@ def final_check(all,file_path):
 
 if __name__ == '__main__':
 
+
     filepath = 'Shiseido_all.xlsx'
+
 
     #create a new excel to save crawler's data
     workbook = openpyxl.Workbook()
